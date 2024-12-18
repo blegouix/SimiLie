@@ -157,11 +157,11 @@ int main(int argc, char** argv)
     MesherXY mesher;
     ddc::Coordinate<X, Y> lower_bounds(-5., -5.);
     ddc::Coordinate<X, Y> upper_bounds(5., 5.);
-    ddc::DiscreteVector<DDimX, DDimY> nb_cells(1000, 1000);
+    ddc::DiscreteVector<DDimX, DDimY> nb_cells(50, 50);
     ddc::DiscreteDomain<DDimX, DDimY> mesh_xy = mesher.template mesh<
             ddc::detail::TypeSeq<DDimX, DDimY>,
             ddc::detail::TypeSeq<BSplinesX, BSplinesY>>(lower_bounds, upper_bounds, nb_cells);
-    assert(mesh_xy.template extent<DDimX>() == mesh_xy.template extent<DDimY>());
+    assert(static_cast<int>(mesh_xy.template extent<DDimX>()) == static_cast<int>(mesh_xy.template extent<DDimY>()));
     ddc::expose_to_pdi("Nx", static_cast<int>(mesh_xy.template extent<DDimX>()));
     ddc::expose_to_pdi("Ny", static_cast<int>(mesh_xy.template extent<DDimY>()));
 
@@ -253,6 +253,7 @@ int main(int argc, char** argv)
     sil::exterior::deriv<MuLow, DummyIndex>(Kokkos::DefaultExecutionSpace(), gradient, potential);
     Kokkos::fence();
 
+/*
     // Hodge star
     [[maybe_unused]] sil::tensor::tensor_accessor_for_domain_t<HodgeStarDomain> hodge_star_accessor;
     ddc::cartesian_prod_t<ddc::DiscreteDomain<DDimX, DDimY>, HodgeStarDomain>
@@ -309,6 +310,7 @@ int main(int argc, char** argv)
     Kokkos::fence();
 
     // Laplacian
+*/
     [[maybe_unused]] sil::tensor::TensorAccessor<DummyIndex> laplacian_accessor;
     ddc::DiscreteDomain<DDimX, DDimY, DummyIndex> laplacian_dom(
             mesh_xy.remove_last(ddc::DiscreteVector<DDimX, DDimY> {1, 1}),
@@ -316,6 +318,7 @@ int main(int argc, char** argv)
     ddc::Chunk laplacian_alloc(laplacian_dom, ddc::DeviceAllocator<double>());
     sil::tensor::Tensor laplacian(laplacian_alloc);
 
+/*
     ddc::parallel_for_each(
             Kokkos::DefaultExecutionSpace(),
             laplacian.non_indices_domain(),
@@ -323,6 +326,9 @@ int main(int argc, char** argv)
                 sil::tensor::tensor_prod(laplacian[elem], dual_laplacian[elem], hodge_star2[elem]);
             });
     Kokkos::fence();
+*/
+    sil::exterior::
+            codifferential<MuLow, MuLow>(Kokkos::DefaultExecutionSpace(), laplacian, gradient, inv_metric);
 
     auto laplacian_host
             = ddc::create_mirror_view_and_copy(Kokkos::DefaultHostExecutionSpace(), laplacian);
